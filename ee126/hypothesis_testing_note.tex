@@ -1,0 +1,319 @@
+\documentclass{article}
+\usepackage{gary}
+\usepackage[margin=1.25in]{geometry}
+\usepackage{ dsfont }
+\newcommand\TODO[1]{\textcolor{red}{[TODO]#1}}
+\title{Hypothesis Testing}
+\author{EECS 126 (UC Berkeley)}
+\date{Spring 2019}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+Thus far in this class, we have been trying to predict behavior for a given model (e.g., how many arrivals do we expect in $\tau$ time for a Poisson Process). Hypothesis Testing deals with the reverse direction, of trying to fit a model for a set of observations.\footnote{the Neyman-Pearson regime of hypothesis testing that we will be doing in this class is a Frequentist method (i.e., $H_0$ being true is not a random variable). Bayesian hypothesis testing has a different setup and solution which we will not go into in this note.}
+
+The general setup of the problem is as follows: you are given some observation(s) $x \sim X$, and you are told that there is some $\theta^* \in \Theta$ for which the data was drawn as $X \sim \pr_{\theta^*}$, and the task is to determine whether $\theta^*$ is in $\Theta_0$ or in $\Theta_1$ (these sets are constructed where $\Theta_0 \cup \Theta_1 = \Theta$ and $\Theta_0 \cap \Theta_1 = \emptyset$). If $\theta^* \in \Theta_0$ we say $H_0$ is correct, otherwise, $H_1$ is correct. An example may be more illuminating: 
+
+% Hypothesis testing is using information to determine which one two mutually exculsive hypotheses is correct, $H_0$ (the null hypothesis) or $H_1$ (the alternate hypothesis) respectively, given an observation $X$. Formally, we want to determine whether an unknown parameter $\theta$ is in the set $\Theta_0$ or in the set $\Theta_1$. If $\theta \in \Theta_0$ we say $H_0$ is correct, otherwise, $H_1$ is correct. According to our construction of $\Theta_0$ and $\Theta_1$, $\theta$ is guarenteed to be in one but not both; in other words, $\Theta_0 \cup \Theta_1 = \Theta$, ($\Theta$ is the entires space of possible parameters) and $\Theta_0 \cap \Theta_1 = \emptyset$
+
+\begin{example}
+Suppose you have 10 fire alarms in your home. $k$ of the fire alarms went off, and you want to determine whether there is actually a fire in your home or its a false alarm. $H_0$, the null hypothesis, is that there is no fire; $H_1$, the alternate hypothesis, is that there is a fire in your home. In general, we assume the null hypothesis is correct until we get more information to overturn this assumption. In this example, maybe we decide that if 1 fire alarm went off, this is not enough information to say that the house is on fire, because its more likely that the alarm is faulty. However, if 8 alarms went off, maybe under our knowledge, we would reject the null hypothesis and say the house is on fire. In this example $\Theta_0 = \{ 0 \}$ and $\Theta_1 = \{ 1\}$. If we decide based on our information that $\theta = 0$, then we say the house is not on fire ($H_0$). Otherwise we would say $\theta = 1$, that the house is on fire ($H_1$). 
+\end{example}
+
+We call $H_0$ (and $H_1$) \textbf{simple} if $\Theta_0$ and $\Theta_1$ each only contain one item. Notice that in the example, the hypothesis test is simple. Suppose instead of determining whether the house was on fire, we were trying to estimate what percentage of the house was on fire. $\Theta_0 = \{0 \}$ and $\Theta_1 = (0, 100]$. In this case the null hypothesis that $0\%$ of the house is on fire is simple, while the alternate hypothesis is not simple. \textit{The focus of this note will be on simple null and simple alternate tests.}
+
+% For a simple hypothesis test in general, we want to test which of the two simple simple hypothesises $H_0$ and $H_1$ is true. We are given access to some observation $x$ (called the \textbf{Test Statistic}) which is a realization of the random variable $X$.
+
+We can design any arbitrary test that uses our observation (later we will find that there is some notion of ``optimal" test); in particular our test can be thought of as a \textbf{Acceptance Region} $A$ i.e., \textit{the test is: accept $H_0 \iff x \in A$}. More often than not (at least in this class) the problem is to determine what $A$ needs to be for a given set of conditions.
+\begin{example}[Acceptance Regions]
+Examples of such arbitrary tests are:
+\begin{enumerate}
+    \item Reject $H_0$ if and only if $x > t$
+    \item Reject $H_0$ if and only if $x = t$
+    \item Reject $H_0$ with probability $\gamma$ when $x > t$ 
+\end{enumerate}
+where $t \in \mathbb{R}$ is arbitrary and used to define the acceptance region of the test. Note that these tests are arbitrary and are not necessarily ``optimal'' in the Neyman-Pearson sense.
+\end{example}
+
+For any arbitrary test, there is a possibility of rejecting the null when the null is in fact true. This is called a \textbf{Type-I Error} or \textbf{probability of false alarm (PFA)}. The probability of a type-I error occurring is called the \textbf{significance level} which is denoted by $\alpha$. More formally, this value is in general\footnote{$\pr_{H_0}(\ldots)$ denotes the probability of $\ldots$ occurring when $H_0$ is true. Similarly, $\pr_{H_1}(\ldots)$ denotes the probability of $\ldots$ occurring when $H_1$ is true.}:
+\[
+\alpha(A) \coloneqq \pr_{H_0}(\text{choosing } H_1) = \pr_{H_0}(x \not\in A)
+\]
+
+On the flip side, there is a possibility of accepting the null when the alternative is true. This is called a \textbf{Type-II Error}. The probability of a type-II error is defined as $\beta$ and it is in general:
+\[
+\beta(A) \coloneqq \pr_{H_1}(\text{choosing } H_0) = \pr_{H_1}(x \in A)
+\]
+The probability of the test to correctly reject the null is called the \textbf{power} (also called the \textbf{probability of correct detection (PCD)}) of the test, which is denoted by $1-\beta$.
+
+Even though $A$ can be chosen arbitrarily, we want to find the ``best'' $A$. It is clear that there are two conflicting interests. We want minimize the probability of a type-I error, while simultaneously maximizing the power of the test. So to formalize this issue, we formulate the problem as ``how large of a PCD can we get for a constrained PFA?" In other words, it is the following optimization problem:
+\begin{gather}
+q\coloneqq \max_{A} 1 - \beta(A)\label{ogmain}\\
+\text{s.t. } \alpha(A) \leq z\nonumber
+\end{gather}
+Where $z$ is some predefined constant (often times, $z = 0.05$). It turns out for the simple vs simple hypothesis testing regime, we can characterize the ``optimal'' testing scheme (i.e., the $A$ that maximizes $q$)
+
+\section{``Optimal" Likelihood Ratio test}
+% We first define the following:
+\begin{mydef}[Likelihood ratio]
+We define the Likelihood ratio to be:
+\begin{align*}
+L(x) \coloneqq \frac{\pr_{H_1}(x)}{\pr_{H_0}(x)} \quad \text{or} \quad L(x) \coloneqq \frac{f_{H_1}(x)}{f_{H_0}(x)} 
+\end{align*}
+\end{mydef}
+
+\begin{mydef}[Likelihood ratio test]
+\label{test}
+The Likelihood ratio test (also called the Neyman-Pearson Test): for a critical threshold $c$ and for observation $x$
+\begin{enumerate}
+    \item accept $H_0$ if $L(x) < c$
+    \item reject $H_0$ with probability $\gamma$ if $L(x) = c$.
+    \item reject $H_0$ if $L(x) > c$
+\end{enumerate}
+Note that this use of $L(x)$ characterizes the acceptance region $A$
+\end{mydef}
+
+\begin{lemma}[Neyman-Pearson]
+Consider a particular choice of $c$ in the Likelihood Ratio test, such that
+\begin{align*}
+\pr_{H_0}(L(x) > c) + \gamma \pr_{H_0}(L(x) = c) = \alpha_0 \qquad \pr_{H_1}(L(x) < c) +  (1-\gamma) \pr_{H_1}(L(x) = c) = \beta_0
+\end{align*}
+
+Suppose there is some other test, with rejection region $A$, which achieves a smaller or equal false rejection probability $\pr_{H_0}(X \in A) \leq \alpha_0$ then $\pr_{H_1}(x \not\in A) \geq \beta_0$. There is strict inequality $\pr_{H_1}(X \not\in A) > \beta_0$ when $\pr_{H_0}(X \in A) < \alpha_0$ 
+
+In other words, the Likelihood Ratio Test is the most powerful test.
+\end{lemma}
+\begin{proof}
+In the Bertsekas book page 491. This theorem was paraphrased from the Bertsekas book.
+\end{proof}
+
+This lemma characterizes what the optimal acceptance region should look like. As a consequence of the Neyman-Pearson Lemma, \eqref{ogmain} is equivalent to: 
+% \TODO{talked to sinho, said this is true; but need verifcation}
+\begin{gather}
+q = \max_{c} 1 - \pr_{H_1}(L(x) < c) -  (1-\gamma) \pr_{H_1}(L(x) = c) \label{main}\\
+\text{s.t. } \pr_{H_0}(L(x) > c) + \gamma \pr_{H_0}(L(x) = c) = z \nonumber
+\end{gather}
+
+This has an important consequence as we find the optimal parameters of our decision rule by solving for the value of $c$ that sets $\pr_{H_0}(L(x) > c) + \gamma \pr_{H_0}(L(x) = c) = z$. However, $L(x)$ is often difficult to analyze. So oftentimes in this class, there will be some equivalent condition that is easier to manipulate. i.e., it may be the case that we have a relationship $L(x) > c \iff B$ for an event $B(x)$ which is easier to handle; e.g., in this class, often times $L(x)$ is monotonic in $x$; this means $L(x) > c \iff x > t \text{ or }x < t$. We can use these if and only if conditions to rewrite the Likelihood ratio test in an equivalent, more digestible way. This type of trick is elucidated in the next example: 
+% An example may help to better contextualize the concepts just introduced. 
+
+
+
+% For any given $H_0$ and $H_1$, there are a variety of different tests we could have used. For example instead of picking one threshold $t$, we could have chosen a $t_0$ and $t_1$ such that we reject $H_0$ if $x < t_0$ and $x > t_1$. This would have been a valid test, and we could have solved the optimization problem \eqref{main}. However, not all tests are made equally powerful, this alternative formulation of the test may result in a smaller $q(\alpha, \beta)$. \textit{The question now becomes: what type of test results in the largest $q(\alpha, \beta)$ value?}
+
+% \TODO{add neyman pearson hypothesis lemma}
+
+% It turns out for the situation where $\Theta_0$ and $\Theta_1$ are both simple; the Neyman-Pearson test using likelihood ratios is most powerful (i.e., maximizes $q(\alpha, \beta)$). We define the \textbf{Likelihood ratio} to be\footnote{$\pr(\ldots)$ is substituded for a $f(\ldots)$ when $X$ is continuous}:
+% \begin{align*}
+% L(x) = \frac{\pr_{H_1}(x)}{\pr_{H_0}(x)}
+% \end{align*}
+
+
+% However, in order to ``do a hypothesis" we need to identify what $c$ such that it satisfies equation \eqref{main} for a given $z$. i.e., we solve for $c$ such that\footnote{Notice that often times in a continuous setting $L(x) = c$ forall $c$ occurs with probability 0. In settings like that, we do not need to consider what $\gamma$ needs to be.}:
+% \begin{align*}
+% q(\alpha, \beta) &\coloneqq \max_t \pr(L(x) > c| H_1)\\
+% &\text{s.t. } \pr(L(x) < c| H_1) + \gamma \pr(L(x) = c| H_1)  \leq z
+% \end{align*}
+
+
+
+
+% \begin{example}[Normal RV Hypothesis Test]
+% \label{ex1}
+% Suppose, we observe some test statistic $x \in \mathbb{R}$ which is an instance of a Normal random variable $X$ with variance $\sigma^2$. We will conduct a hypothesis test to determine whether $X$ is $\mathcal{N}(0,\sigma^2)$ or $\mathcal{N}(1,\sigma^2)$ by using our test statistic $x$. Formally, we have two simple hypotheses:
+% \begin{itemize}
+%     \item $H_0:\ X \sim \mathcal{N}(0, \sigma^2)$; $\Theta_0 = \{\mu = 0\}$
+%     \item $H_1:\ X \sim \mathcal{N}(1, \sigma^2)$; $\Theta_1 = \{\mu = 1\}$
+% \end{itemize}
+
+% We arbitrarily define our test to be the following, where $t$ parameterizes our test:
+% \begin{enumerate}
+%     \item Reject $H_0$, if $x > t$
+%     \item Accept $H_0$ if $x < t$
+% \end{enumerate}
+
+% \end{example}
+
+\newpage
+\begin{example}[Normal RV Hypothesis Test]
+ Suppose we are trying to determine whether $X$ is $\mathcal{N}(0,\sigma^2)$ or $\mathcal{N}(1,\sigma^2)$ by using our observation $x$ for a significance level $z$ via a Likelihood ratio hypothesis test. Our two simple hypotheses are: 
+\begin{itemize}
+    \item $H_0:\ X \sim \mathcal{N}(0, \sigma^2)$; $\Theta_0 = \{\mu = 0\}$
+    \item $H_1:\ X \sim \mathcal{N}(1, \sigma^2)$; $\Theta_1 = \{\mu = 1\}$
+\end{itemize}
+\noindent\rule{4cm}{0.4pt}
+
+Let's see what the most powerful test is. \textbf{i.e., let's conduct a likelihood ratio test.} First, let's see what the likelihood ratio is:
+\begin{align*}
+L(x) &=  \frac{f_{\mu=1}(x)}{f_{\mu=0}(x)} = \frac{\frac{1}{\sigma\sqrt{2\pi}} \exp\left( -\frac{(x-1)^2}{2\sigma^2} \right)}{\frac{1}{\sigma\sqrt{2\pi}} \exp\left(- \frac{x^2}{2\sigma^2} \right)}
+=\exp\left( -\frac{(x-1)^2}{2\sigma^2} + \frac{x^2}{2\sigma^2}\right)
+= \exp\left( \frac{2x -1}{2\sigma^2}\right)
+\end{align*}
+
+Observe that for some $c \in \mathbb{R}$
+\begin{align*}
+L(x) = \exp\left( \frac{2x -1}{2\sigma^2}\right) > c \iff  x > t
+\end{align*}
+for some $t \in \mathbb{R}$ since $L(x)$ is monotonically increasing in $t$. Using this observation, we can see that the likelihood ratio test reduces to\footnote{the randomization variable $\gamma$ is not needed here because $\pr(X = t) = 0$ for all $t$ when $X \sim \mathcal{N}(\mu, \sigma^2)$}:
+\begin{enumerate}
+    \item reject $H_0$ if $x > t$
+    \item accept $H_0$ if $x \leq t$
+\end{enumerate}
+Notice that this rule intuitively makes sense. Since $H_1$ corresponds to the hypothesis that the mean is larger, which means that a larger observe value intuitively corresponds to higher likelihood that $\mu=1$.
+
+With these values defined, we know that $\alpha = \pr_{\mu=0}(X > t)$ and $\beta = \pr_{\mu=1}(X < t)$. In setting up the optimization problem specified in \eqref{main}, we see that we need to find that maximizes the following:
+\begin{gather*}
+\max_t 1 - \Phi\left( (t-1) / \sigma \right)\\
+\text{s.t. } 1 - \Phi\left( t / \sigma \right) = z
+\end{gather*}
+We can then solve for the $t$ value where $1 - \Phi\left( t / \sigma \right) = z$.
+\end{example}
+
+Oftentimes when the likelihood ratio has non-zero probability on a single value i.e., $\pr(L(x) = d) > 0$, $\gamma$ may need to be calibrated. When $X$ is discrete, the likelihood ratio has a discrete image, so this serves as a sufficient condition indicating when $\gamma$ may need to be tuned. Here is an example when $\gamma$ is needed when $X$ is a continuous random variable:
+
+\newpage
+\begin{example}[Tuning $\gamma$]
+Suppose we are trying to determine whether $X$ is $\text{Uniform}[-1, 1]$ or $\text{Uniform}[0, 2]$ for a given observation $x \sim X$ and a significance level $z$ via a hypothesis test. Formally, our hypotheses are:
+\begin{itemize}
+    \item $H_0:\ X \sim \text{Uniform}[-1, 1]$
+    \item $H_1:\ X \sim \text{Uniform}[0, 2]$
+\end{itemize}
+\noindent\rule{4cm}{0.4pt}
+
+Let's conduct a likelihood ratio test. The likelihood ratio is:
+\begin{align*}
+L(x) = \frac{f_{H_1}(x)}{f_{H_0}(x)} = \frac{\mathds{1}\{0 \leq x \leq 2\}}{\mathds{1}\{-1 \leq x \leq 1\}}
+\end{align*}
+
+Upon using the Neyman-Pearson Lemma, we need to find the solution of \eqref{main} which reduces to finding a solution of:
+\begin{align*}
+\pr_{H_0}(L(x) > c) + \gamma \pr_{H_0}(L(x) = c) = z
+\end{align*}
+
+Since the output of $L(x)$ is $\{0, 1, \infty\}$, we observe that we only need to consider $c= 0, c = 1, c= \infty$. So we can brute force our choice of $c$ directly by evaluating $\pr_{H_0}(L(x) > c) $ and $\pr_{H_0}(L(x) = c)$. 
+
+We make the following observations:
+\begin{enumerate}
+    \item Suppose $c = 0$, observe that $\pr_{H_0}(L(x) = 0 ) = 1/2$ and $\pr_{H_0}(L(x) > 0) = 1- \pr_{H_0}(L(x) = 0 ) = 1/2$. Thus, we get the equation $z = 1/2 + \gamma 1/2$
+    \item Suppose $c = 1$, observe that $\pr_{H_0}(L(x) = 1 ) = 1/2$ and $\pr_{H_0}(L(x) > 1) = 0$. Thus, we get the equation $z =  0 + \gamma 1/2$
+    \item Suppose $c = \infty$, observe that $\pr_{H_0}(L(x) = \infty ) = 0$ and $\pr_{H_0}(L(x) > \infty) = 0$. Thus, we get the (useless) equation $z = 0$, which is not satisfiable for $z \neq 0$.
+\end{enumerate}
+
+We observe that we get the following test in accordance to the procedure described in Definition \ref{test}:
+\begin{enumerate}
+    \item If $0 \leq z \leq 1/2$, (using the second case above) we can set $c = 1$ and $\gamma = 2z$.
+    \item If $1/2 \leq z \leq 1$, (using the first case above) we can set $c = 0$ and $\gamma = 2(z- 1/2)$
+\end{enumerate}
+
+Even though this is an optimal test, we can also disentangle the test from the likelihood ratio altogether by utilizing the following observations:
+\begin{itemize}
+    \item $L(x) = 0 \iff x \in [-1, 0)$
+    \item $L(x) = 1 \iff x \in [0, 1]$
+    \item $L(x) = \infty \iff x \in (1, 2]$
+\end{itemize}
+
+Thus in substituting these if and only if conditions into the procedure described in \ref{test}, we get the equivalent tests:
+\begin{enumerate}
+    \item If $0 \leq z \leq 1/2$:
+    \begin{enumerate}
+        \item accept $H_0$ if $x \in [-1, 0)$
+        \item reject $H_0$ with probability $\gamma = 2z$ if $x \in [0, 1]$.
+        \item reject $H_0$ if $x \in (1, 2]$
+\end{enumerate}
+    \item If $1/2 < z \leq 1$:
+    \begin{enumerate}
+        \item reject $H_0$ with probability $\gamma = 2(z-  1/2)$ if $x \in [-1, 0)$.
+        \item reject $H_0$ if $x \in [0, 2]$
+\end{enumerate}
+\end{enumerate}
+
+\textbf{Side note:} It turns out that the second test for $\gamma > 0$ is ``worse"\footnote{its not worse in the Neyman-Pearson Sense as the PCD is maximized while the PFA is still below a threshold $z$. i.e., in the Neyman-Pearson notion of optimality, the second test with $\gamma > 0$ is still optimal even though there are clear shortcomings.} the second test for $\gamma = 0$ because there is no way that $H_1$ is true if $x \in [-1, 0)$. In other words the PCD of the second test with $\gamma=0$ is already 1 (the maximum value), so making $\gamma$ larger only serves to increase the PFA. For this reason, choices of $z>1/2$ don't really make sense in this problem.
+\end{example}
+
+
+% We define \textbf{p-value} as the evidence against the null. It is the probability of observing the test-statistic or something more extreme conditioned that $H_0$ is true.
+
+% In our example, the p-value is:
+% \[
+% \pr(X > x | H_0) = \pr(X>x | X \sim \mathcal{N}(0, \sigma^2)) = 1 - \Phi\left( x / \sigma \right)
+% \]
+
+% In our example, more extreme values are values that are $> x$ because those are the values that are less likely to have come from our $H_0$ Gaussian and more likely to have come from our $H_1$ Gaussian. Intuitively, the smaller the p-value the less likely our test statistic is to have come from our null hypothesis Gaussian. In general, if the p-value is less than a predefined \textbf{significance level} denoted by $\alpha$, then we reject $H_0$ and accept $H_1$. Typically, $\alpha$ is chosen to be $0.05$. We define the notion of a \textbf{critical value}, denoted by $t$, where $\pr(X > t | H_0 \text{ true}) = \alpha$. We can interpret our test as the following. If our test statistic $x > t$, then we reject the null hypothesis and accept the alternative hypothesis. Because of the way $\alpha$ is defined, $\alpha$ can be interpreted as the probability of a Type-I error, which is also called the \textbf{probability of false alarm (PFA)}. In other words, this is the probability that we reject the null hypothesis, when the null hypothesis is in fact true.
+
+% \begin{mydef}[Type-I Error]
+% The error that occurs when $H_0$ was rejected when $H_0$ was in fact true.
+% \end{mydef}
+
+% However, p-value is not the only value that we care about. Even if the p-value is really small, meaning that the probability of observing the test statistic is unlikely, it doesn't take into account the alternative hypothesis at all. Even the p-value is small, it may be very possible that the probability of observing $x$ when $H_1$ is true is even smaller.
+
+% In order to address this issue, we define the value $\beta \coloneqq \pr(X < t | H_1)$. $\beta$ can be interpreted as the probability of a Type-II Error; it is the probability of accepting the null when the alternative is true. We define \textbf{power} as $1- \beta = \pr(X > t | H_1)$. Power can be interpreted as the probability of our test rejecting the null hypothesis given that the alternative hypothesis is true. 
+
+% In our example,
+% \[
+% \beta = \pr(X < t | H_1) = \pr(X<t | X \sim \mathcal{N}(1, \sigma^2)) = \Phi\left( (t-1) / \sigma \right)
+% \]
+
+% \section{Testing}
+% In order to gain information about which Hypothesis is true, we introduce the concept of the test. Let's define $\varphi(x, \theta)$ as the chance of rejecting $H_0$ when you observe $x$ for a given $\theta$. Furthermore, let's define the \textbf{power function}:
+
+% $$\beta(\theta) := \E(\varphi(X, \theta) | \theta)$$
+
+% In words, this is the probability of rejecting the null hypothesis as a function of $\theta$. Another value we are concerned about is the Probability of False Alarm (PFA): the probability we reject the null hypothesis when in reality the null hypothesis is true. This is defined as $\alpha$:
+
+% $$\alpha := \sup_{\theta \in \Theta_0} \beta(\theta) = \sup_{\theta \in \Theta_0} E_X(\varphi(X, \theta | \theta) $$
+
+% \subsection{Simple Hypothesis}
+
+% Now lets assume we are working with two simple hypotheses, where $\Theta_0 = \{0\}$ and $\Theta_1 = \{1\}$. Notice that we simplify our $\alpha$ term as follows:
+
+% $$\alpha := \sup_{\theta \in \Theta_0} \beta(\theta) = \beta(0)$$
+
+% This is called the \textbf{probability of false alarm}. The other term we care about is the \textbf{probability of correct detection}:
+
+% $$\beta(1)$$
+
+% Intuitively, we want to find the best test that maximizes PCA, while minimizes PFA. Because these are two competing interests, we instead maximize PCA while fixing the PFA. This is essentially a constrainted optimization problem.
+
+% \begin{align}
+%     \max_{\varphi} \beta(0)\\
+%     \text{s.t. } \beta(1)
+% \end{align}
+
+
+
+
+
+% Let's begin with a simple hypothesis test, where we observe some value $x \in \mathbb{R}$ which is an instance of a Normal random variable $X$ with variance $\sigma^2$. Our observation ($x$ in this case) is called the \textbf{Test Statistic}. We will conduct a hypothesis test to determine whether $X$ is $\mathcal{N}(0,\sigma^2)$ or $\mathcal{N}(1,\sigma^2)$ by using our test statistic $x$. Formally, we have two simple hypotheses:
+% \begin{enumerate}
+%   \item $H_0:\ X \sim \mathcal{N}(0, \sigma^2)$; $\Theta_0 = \{\mu = 0\}$
+%   \item $H_1:\ X \sim \mathcal{N}(1, \sigma^2)$; $\Theta_1 = \{\mu = 1\}$
+% \end{enumerate}
+
+% To conduct our hypothesis test, we first assume that the null $H_0$ is true. We reject the null if our test statistic provides enough evidence to reject the null. Suppose we have the following test. If $x > t$, where $t$ is defined as the critical value, we reject $H_0$; otherwise we accept the $H_0$.
+
+% Under this regime, there is a possibility of rejecting the null when the null is in fact true. This is called a \textbf{Type-I Error} or \textbf{probability of false alarm (PFA)}. The probability of a type-I error occurring is called the \textbf{significance level} which is denoted by $\alpha$. More formally, this value is \textit{in general}:
+% \[
+% \alpha \coloneqq \pr(\text{choosing } H_1 |  H_0 \text{ is correct})
+% \]
+% In our example $\alpha = \pr(X > t | \mu = 0)$. On the flip side, there is a possibility of accepting the null when the alternative is true. This is called a \textbf{Type-II Error}. The probability of a type-II error is defined as $\beta$ and it is \textit{in general}:
+% \[
+% \beta \coloneqq \pr(\text{choosing } H_0 |  H_1 \text{ is correct})
+% \]
+% In our example, $\beta = \pr(X < t | \mu = 1)$. The probability of the test to correctly reject the null is called the \textbf{power} (also called the \textbf{probability of correct detection (PCD)}) of the test, which is denoted by $1-\beta$.
+
+% With these two values defined, the only thing remaining to is to find what to set the parameters $\{t_1,\ldots, t_n\}$ to be. It is clear that we two conflicting interests. We want minimize the probability of a type-I error, while simultaneously maximizing the power of the test. To address the conflicting issues, we formulate the problem as follows:
+% \begin{gather}
+% q(\alpha, \beta) \coloneqq \max_t 1 - \beta(t) \label{main}\\
+% \text{s.t. } \alpha(t) \leq z
+% \end{gather}
+% Where $z$ is some pre-defined constant. Usually, $z = 0.05$. Observe that in our example, this problem becomes:
+% \begin{gather*}
+% \max_t 1 - \Phi\left( (t-1) / \sigma \right)\\
+% \text{s.t. } 1 - \Phi\left( t / \sigma \right) \leq z
+% \end{gather*}
+% Observe that as $1 - \Phi\left( (t-1) / \sigma \right)$ increases, so does $1 - \Phi\left( t / \sigma \right)$. This means that the maximum objective value is achived when $1 - \Phi\left( t / \sigma \right) = z$. Because there exists only one solution to the constraint, there exists only one $t$ such that this is a feasible problem. 
+
+
+
+
+\end{document}
